@@ -1,0 +1,409 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>GPA 計算機</title>
+  <style>
+    :root{
+      --bg:#f6f8fb;
+      --card:#fff;
+      --accent:#2b7cff;
+      --muted:#6b7280;
+      --danger:#e53e3e;
+      font-family: "Segoe UI", Roboto, "Helvetica Neue", Noto Sans TC, "PingFang TC", sans-serif;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      padding:24px;
+      background:linear-gradient(180deg,var(--bg),#eef2f7);
+      color:#111827;
+      min-height:100vh;
+    }
+    .container{
+      max-width:960px;
+      margin:0 auto;
+    }
+    header{
+      display:flex;
+      align-items:center;
+      gap:16px;
+      margin-bottom:18px;
+    }
+    h1{margin:0;font-size:20px}
+    .card{
+      background:var(--card);
+      border-radius:12px;
+      padding:18px;
+      box-shadow:0 6px 18px rgba(16,24,40,0.06);
+    }
+    .controls{
+      display:flex;
+      gap:12px;
+      align-items:center;
+      flex-wrap:wrap;
+      margin-bottom:12px;
+    }
+    label{font-size:13px;color:var(--muted)}
+    select, input[type="number"]{
+      padding:8px 10px;
+      border-radius:8px;
+      border:1px solid #e6e9ef;
+      font-size:14px;
+      min-width:120px;
+      background:white;
+    }
+    table{
+      width:100%;
+      border-collapse:collapse;
+      margin-top:8px;
+    }
+    th,td{
+      text-align:left;
+      padding:8px 10px;
+      border-bottom:1px solid #f1f5f9;
+      vertical-align:middle;
+      font-size:14px;
+    }
+    th{font-weight:600;color:var(--muted);font-size:13px}
+    .small{font-size:12px;color:var(--muted)}
+    .btn{
+      padding:8px 12px;
+      border-radius:8px;
+      border:0;
+      background:var(--accent);
+      color:white;
+      cursor:pointer;
+      font-weight:600;
+      font-size:14px;
+    }
+    .btn.ghost{
+      background:transparent;color:var(--accent);border:1px solid rgba(43,124,255,0.12);
+    }
+    .actions{display:flex;gap:8px;align-items:center}
+    .right{margin-left:auto}
+    .result{
+      margin-top:12px;
+      display:flex;
+      gap:12px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    .chip{
+      background:#f8fafc;padding:10px 12px;border-radius:10px;border:1px solid #eff4ff;
+      min-width:120px;text-align:center;
+    }
+    .chip .value{font-weight:700;font-size:18px}
+    .danger{color:var(--danger);font-weight:700}
+    @media (max-width:600px){
+      .controls{flex-direction:column;align-items:stretch}
+      select,input[type="number"]{width:100%}
+      .actions{width:100%;justify-content:space-between}
+    }
+    .muted-note{font-size:12px;color:var(--muted);margin-top:8px}
+    .remove-btn{
+      background:transparent;border:0;color:#ef4444;font-weight:700;cursor:pointer;font-size:14px;
+    }
+    footer{margin-top:14px;font-size:13px;color:var(--muted)}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>GPA 計算機</h1>
+      <div class="small">支援 4.0 / 4.3 制（含加權學分）</div>
+    </header>
+
+    <div class="card" role="application" aria-label="GPA 計算器卡片">
+      <div class="controls" aria-hidden="false">
+        <label>
+          制度：
+          <select id="scaleSelect" aria-label="選擇 GPA 制度">
+            <option value="4.0">4.0 制</option>
+            <option value="4.3">4.3 制</option>
+          </select>
+        </label>
+
+        <label>
+          新增課程預設學分：
+          <select id="defaultCredit" aria-label="預設學分">
+            <option value="1">1</option>
+            <option value="2" selected>2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+          </select>
+        </label>
+
+        <div class="actions right">
+          <button id="addRow" class="btn">新增課程</button>
+          <button id="resetBtn" class="btn ghost" title="清除全部課程並重設" type="button">重設</button>
+        </div>
+      </div>
+
+      <table aria-describedby="tableDesc">
+        <caption id="tableDesc" style="display:none">請輸入每門課的成績與學分</caption>
+        <thead>
+          <tr>
+            <th style="width:40%;">課程（可選填）</th>
+            <th style="width:20%;">成績</th>
+            <th style="width:15%;">學分</th>
+            <th style="width:15%;">加權分</th>
+            <th style="width:10%;">操作</th>
+          </tr>
+        </thead>
+        <tbody id="coursesBody">
+          <!-- 動態列由 JS 建立 -->
+        </tbody>
+      </table>
+
+      <div class="result" aria-live="polite">
+        <div class="chip">
+          <div class="small">總學分</div>
+          <div id="totalCredits" class="value">0</div>
+        </div>
+        <div class="chip">
+          <div class="small">總加權分</div>
+          <div id="totalWeighted" class="value">0.000</div>
+        </div>
+        <div class="chip">
+          <div class="small">GPA</div>
+          <div id="gpaValue" class="value">0.000</div>
+        </div>
+        <div class="muted-note">注意：若學分或成績錯誤，GPA 會自動更新為正確值。</div>
+      </div>
+
+      <footer>
+        成績等級對照：A+ / A / A- / B+ / B / B- / C+ / C / C- / D+ / D / F。（A+ 在 4.3 制會被視為 4.3 分，4.0 制則視為 4.0）
+      </footer>
+    </div>
+  </div>
+
+  <script>
+    // 成績對應表（根據 scale 動態處理 A+）
+    const gradeValuesBase = {
+      "A+": 4.3,
+      "A": 4.0,
+      "A-": 3.7,
+      "B+": 3.3,
+      "B": 3.0,
+      "B-": 2.7,
+      "C+": 2.3,
+      "C": 2.0,
+      "C-": 1.7,
+      "D+": 1.3,
+      "D": 1.0,
+      "F": 0.0
+    };
+
+    // 常用成績選項（顯示順序）
+    const gradeOptions = ["A+","A","A-","B+","B","B-","C+","C","C-","D+","D","F"];
+
+    const coursesBody = document.getElementById('coursesBody');
+    const addRowBtn = document.getElementById('addRow');
+    const scaleSelect = document.getElementById('scaleSelect');
+    const defaultCredit = document.getElementById('defaultCredit');
+    const resetBtn = document.getElementById('resetBtn');
+
+    const totalCreditsEl = document.getElementById('totalCredits');
+    const totalWeightedEl = document.getElementById('totalWeighted');
+    const gpaValueEl = document.getElementById('gpaValue');
+
+    // 建立一列課程（可提供預設成績與學分）
+    function createCourseRow({courseName = '', grade = 'A', credit = 2} = {}) {
+      const tr = document.createElement('tr');
+
+      // 課程名稱
+      const tdName = document.createElement('td');
+      const nameInput = document.createElement('input');
+      nameInput.type = 'text';
+      nameInput.placeholder = '課程名稱（選填）';
+      nameInput.value = courseName;
+      nameInput.style.width = '100%';
+      nameInput.style.padding = '6px 8px';
+      nameInput.style.borderRadius = '6px';
+      nameInput.style.border = '1px solid #edf2f7';
+      tdName.appendChild(nameInput);
+
+      // 成績選單
+      const tdGrade = document.createElement('td');
+      const gradeSelect = document.createElement('select');
+      gradeSelect.setAttribute('aria-label','成績');
+      gradeSelect.style.minWidth = '120px';
+      gradeOptions.forEach(g => {
+        const opt = document.createElement('option');
+        opt.value = g;
+        opt.textContent = g;
+        gradeSelect.appendChild(opt);
+      });
+      gradeSelect.value = grade;
+      tdGrade.appendChild(gradeSelect);
+
+      // 學分
+      const tdCredit = document.createElement('td');
+      const creditInput = document.createElement('input');
+      creditInput.type = 'number';
+      creditInput.min = '0';
+      creditInput.step = '0.5';
+      creditInput.value = credit;
+      creditInput.style.width = '100%';
+      creditInput.setAttribute('aria-label','學分');
+      tdCredit.appendChild(creditInput);
+
+      // 加權分（顯示欄：成績分數 * 學分）
+      const tdWeighted = document.createElement('td');
+      tdWeighted.className = 'small';
+      tdWeighted.textContent = '0.000';
+
+      // 操作（刪除）
+      const tdAction = document.createElement('td');
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'remove-btn';
+      removeBtn.type = 'button';
+      removeBtn.textContent = '刪除';
+      tdAction.appendChild(removeBtn);
+
+      tr.appendChild(tdName);
+      tr.appendChild(tdGrade);
+      tr.appendChild(tdCredit);
+      tr.appendChild(tdWeighted);
+      tr.appendChild(tdAction);
+
+      // 事件：任何變動觸發重新計算
+      const recalc = () => {
+        // 驗證學分
+        let c = parseFloat(creditInput.value);
+        if (!isFinite(c) || c < 0) {
+          creditInput.value = 0;
+          c = 0;
+        }
+        const scale = scaleSelect.value;
+        let numeric = gradeToValue(gradeSelect.value, scale);
+        const weighted = numeric * c;
+        tdWeighted.textContent = weighted.toFixed(3);
+        computeGPA();
+      };
+
+      gradeSelect.addEventListener('change', recalc);
+      creditInput.addEventListener('input', recalc);
+      nameInput.addEventListener('input', () => {}); // 未來可加儲存功能
+
+      removeBtn.addEventListener('click', () => {
+        tr.remove();
+        computeGPA();
+      });
+
+      coursesBody.appendChild(tr);
+      // 初次計算
+      recalc();
+      return tr;
+    }
+
+    // 根據制度與成績字串回傳數值
+    function gradeToValue(grade, scale) {
+      if (scale === '4.3') {
+        // 直接用 base 值（A+ = 4.3）
+        return gradeValuesBase[grade] ?? 0;
+      } else {
+        // 4.0 制：A+ 與 A 都視為 4.0
+        if (grade === 'A+' ) return 4.0;
+        // 其餘同 base（A、A-...）
+        return gradeValuesBase[grade] ? (gradeValuesBase[grade] > 4.0 ? 4.0 : gradeValuesBase[grade]) : 0;
+      }
+    }
+
+    // 計算 GPA
+    function computeGPA() {
+      const rows = Array.from(coursesBody.querySelectorAll('tr'));
+      let totalCredits = 0;
+      let totalWeighted = 0;
+      const scale = scaleSelect.value;
+
+      rows.forEach(row => {
+        const gradeSelect = row.querySelector('select');
+        const creditInput = row.querySelector('input[type="number"]');
+        const weightedCell = row.children[3];
+
+        let c = parseFloat(creditInput.value);
+        if (!isFinite(c) || c < 0) c = 0;
+        const grade = gradeSelect.value;
+        const numeric = gradeToValue(grade, scale);
+        const weighted = numeric * c;
+
+        totalCredits += c;
+        totalWeighted += weighted;
+
+        // 更新每列的加權顯示（確保與 gradeToValue 一致）
+        weightedCell.textContent = weighted.toFixed(3);
+      });
+
+      const gpa = totalCredits > 0 ? totalWeighted / totalCredits : 0;
+
+      totalCreditsEl.textContent = totalCredits.toFixed(2).replace(/\.00$/, '');
+      totalWeightedEl.textContent = totalWeighted.toFixed(3);
+      gpaValueEl.textContent = gpa.toFixed(3);
+    }
+
+    // 新增初始幾列（預設 3 列）
+    function initDefaultRows() {
+      coursesBody.innerHTML = '';
+      createCourseRow({grade:'A', credit: parseFloat(defaultCredit.value)});
+      createCourseRow({grade:'A-', credit: parseFloat(defaultCredit.value)});
+      createCourseRow({grade:'B+', credit: parseFloat(defaultCredit.value)});
+      computeGPA();
+    }
+
+    // 事件監聽器
+    addRowBtn.addEventListener('click', () => {
+      createCourseRow({credit: parseFloat(defaultCredit.value)});
+      computeGPA();
+      // 滾動到最下面以便看到新增列
+      window.scrollTo({top: document.body.scrollHeight, behavior:'smooth'});
+    });
+
+    scaleSelect.addEventListener('change', () => {
+      // 當制度改變時重新計算（A+ 行為在不同制中不同）
+      computeGPA();
+    });
+
+    defaultCredit.addEventListener('change', () => {
+      // 不自動改變已存在列，只影響以後新增的列
+    });
+
+    resetBtn.addEventListener('click', () => {
+      if (!confirm('確定要清除所有課程並重設嗎？')) return;
+      initDefaultRows();
+      scaleSelect.value = '4.0';
+      defaultCredit.value = '2';
+      computeGPA();
+    });
+
+    // 初始化
+    initDefaultRows();
+
+    // 輔助：若使用者貼上 csv（課程,成績,學分）可解析（可選）
+    document.addEventListener('paste', (e) => {
+      // 若剪貼板內容包含逗號或換行，嘗試解析成多列課程
+      const text = (e.clipboardData || window.clipboardData).getData('text');
+      if (!text.includes(',') && !text.includes('\n')) return;
+      // 嘗試解析：每行 csv => name,grade,credit
+      const lines = text.trim().split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      let added = 0;
+      for (const ln of lines) {
+        const parts = ln.split(',').map(s => s.trim());
+        if (parts.length >= 2) {
+          const [name, grade, credit] = parts;
+          if (gradeOptions.includes(grade)) {
+            createCourseRow({courseName: name, grade: grade, credit: parseFloat(credit) || parseFloat(defaultCredit.value)});
+            added++;
+          }
+        }
+      }
+      if (added > 0) {
+        computeGPA();
+        alert('已匯入 ' + added + ' 筆課程（根據剪貼簿內容）。');
+      }
+    });
+  </script>
+</body>
+</html>
